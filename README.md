@@ -8,6 +8,7 @@ A compact Retrieval-Augmented Generation (RAG) API on **Cloudflare Workers (Pyth
 
 It’s designed to power a simple frontend chat with strict CORS, clear JSON errors, and environment-driven config for staging/production.
 
+### [Course_Hero Frontend](https://github.com/vishal-codes/course-hero)
 
 # Description
 
@@ -172,29 +173,6 @@ npx wrangler deploy
 ```
 
 
-
-# Architecture
-
-```
-+---------------------+        +-------------------+        +-------------------------+
-|  Frontend (Vercel)  |  --->  |  Worker (Python)  |  --->  |  Cloudflare Workers AI  |
-|  /ask (POST JSON)   |        |  src/entry.py     |        |  (embed + generate)     |
-+---------------------+        |  CORS, JSON, RAG  |        +-------------------------+
-         ^                     |                    |                   |
-         |                     |                    |                   v
-         |                     |                    |        +-------------------------+
-         |                     +--------------------+------> |  Cloudflare Vectorize   |
-         |                             (query vectors)       |  (csuf-courses index)   |
-         |                                                   +-------------------------+
-         +----------------------------- responses (JSON: { "answer": "..." })
-```
-
-* **Workers AI**: runs the embedding model and the chat model.
-* **Vectorize**: stores your course vectors and metadata for semantic search.
-* **Worker (Python)**: HTTP entrypoint, orchestrates RAG, enforces CORS, formats output.
-* **(Optional) AI Gateway**: you can configure caching/analytics for AI calls later without code changes.
-
-
 # Terminologies (Cloudflare)
 
 * **Workers (Python)**: Serverless runtime at the edge. Your API lives here (`src/entry.py`).
@@ -302,24 +280,3 @@ Content-Type: application/json
   ]
 }
 ```
-
-**Errors**
-
-```json
-{ "error": "Missing 'question'" }                   // 400
-{ "error": "CORS not allowed" }                     // 403
-{ "error": "Embedding failed", "detail": "..." }    // 502
-{ "error": "Vector search failed", "detail": "..." }// 502
-{ "error": "Answer generation failed", "detail": "..." } // 502
-{ "error": "unhandled_exception", "detail": "..." } // 500
-```
-
-
-
-# Tips & Troubleshooting
-
-* **Vectors not listing?** Ensure NDJSON is strict JSON (no `NaN`, `Infinity`) and Content-Type is `application/x-ndjson`.
-* **CORS 403?** Make sure the exact origin (scheme + host + port) is in `ALLOWED_ORIGINS`.
-* **Embedding error 5006 / “oneOf at '/' not met”**: Workers AI expects `{ "text": "..." }` (string) or `{ "text": ["...","..."] }` (batch) — ensure you use the correct shape.
-* **Dev charges**: Workers AI & Vectorize calls in `wrangler dev` hit real services.
-
